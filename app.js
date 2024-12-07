@@ -1,17 +1,28 @@
-import { connectDb } from './configs/db.js'
+import { connectDb } from './config/db.js'
+import { connectRedis } from './config/redis.js'
+import cors from 'cors'
+import dotenv from 'dotenv'
 import express from 'express'
+import rateLimit from './middlewares/rateLimit.js'
 import recommendProperties from './utils/recommendProperties.js'
+
+dotenv.config({
+	path: '.env.local',
+})
 
 const app = express()
 const PORT = process.env.PORT || 3000
 
+app.set('trust proxy', true)
 app.use(express.json())
+app.use(cors())
+app.use(rateLimit)
 
 // Ensure database connection is established during server startup
 const initializeServer = async () => {
 	try {
 		await connectDb()
-		console.log('Database connected successfully')
+		await connectRedis()
 
 		// Start the server
 		app.listen(PORT, () => {

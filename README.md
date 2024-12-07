@@ -14,7 +14,7 @@ This project is a Node.js application designed to provide property recommendatio
 ## Project Structure
 
 - **`app.js`**: Main entry point that sets up the Express server and API routes.
-- **`configs/db.js`**: Manages MongoDB connection and disconnection.
+- **`config/db.js`**: Manages MongoDB connection and disconnection.
 - **`utils/`**: Contains utility scripts for core functionality
 - **`models/`**: Placeholder for potential MongoDB schemas (e.g., `Property` model).
 
