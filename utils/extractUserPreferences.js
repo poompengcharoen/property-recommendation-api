@@ -45,8 +45,9 @@ const extractUserPreferences = async (userInput) => {
 			messages: [
 				{
 					role: 'system',
-					content:
-						'You are a helpful assistant that extracts user preferences from a user message.',
+					content: `You are a helpful assistant that extracts user preferences from a user message into a JSON object. You should only generate the JSON object, no other text or formatting. Use only available types of ${availableTypes.join(
+						', '
+					)}. Do not provide any additional text or explanations. All fields are optional. If not provided, skip the field. Only generate the JSON object, no other text or formatting.`,
 				},
 				{ role: 'user', content: prompt },
 			],

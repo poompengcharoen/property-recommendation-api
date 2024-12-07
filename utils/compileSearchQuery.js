@@ -109,8 +109,8 @@ const compileSearchQuery = async (preferences) => {
 	if (!query.$or.length) delete query.$or
 	if (!query.$and.length) delete query.$and
 
-	// Prioritize properties with priceNumeric
-	const sort = { priceNumeric: -1, keywords: -1 } // Properties with priceNumeric first
+	// Sort properties
+	const sort = { priceNumeric: -1, keywords: -1 }
 
 	return { query, sort }
 }

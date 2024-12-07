@@ -46,7 +46,7 @@ app.post('/', async (req, res) => {
 		count = cachedCount ? cachedCount : count
 		const isExceedingUsageLimit = count >= 5
 
-		if (isExceedingUsageLimit) {
+		if (process.env.NODE_ENV === 'production' && isExceedingUsageLimit) {
 			res.status(429).json({
 				success: false,
 				message: `You have exceeded the usage limit. Please try again later.`,
