@@ -1,22 +1,24 @@
+import OpenAI from 'openai'
 import getAvailableTypes from './getAvailableTypes.js'
-import ollama from 'ollama'
+
+const openai = new OpenAI()
 
 const extractUserPreferences = async (userInput) => {
 	const availableTypes = await getAvailableTypes()
 	const prompt = `
-    The user is asking for property recommendations. Based on their message, generate a JSON object with their preferences. Only generate the JSON object, no other text.
-		
+    The user is asking for property recommendations. Based on their message, generate a JSON object with their preferences. Only generate the JSON object, no other text or formatting.
+    
     Example JSON:
     {
-			"title": "Sansiri",
-			"types": ["condo", "house"],
+      "title": "Sansiri",
+      "types": ["condo", "house"],
       "budget": 40000,
       "currency": "THB",
       "bedrooms": "3",
-			"bathrooms": "2",
+      "bathrooms": "2",
       "location": "Phuket",
       "amenities": ["beach", "tennis", "court", "park", "restaurant", "shopping", "center", "pet", "friendly"],
-			"avoids": ["busy", "area", "school"]
+      "avoids": ["busy", "area", "school"]
     }
 
     Dictionary:
@@ -38,11 +40,19 @@ const extractUserPreferences = async (userInput) => {
   `
 
 	try {
-		const result = await ollama.generate({
-			model: 'llama3.2',
-			prompt,
+		const response = await openai.chat.completions.create({
+			model: 'gpt-4o-mini',
+			messages: [
+				{
+					role: 'system',
+					content:
+						'You are a helpful assistant that extracts user preferences from a user message.',
+				},
+				{ role: 'user', content: prompt },
+			],
 		})
-		const preferences = JSON.parse(result.response, null, 2)
+		const result = response.choices[0].message.content
+		const preferences = JSON.parse(result, null, 2)
 		return preferences
 	} catch (error) {
 		console.error('Error:', error)

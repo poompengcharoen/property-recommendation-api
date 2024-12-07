@@ -1,4 +1,6 @@
-import ollama from 'ollama'
+import OpenAI from 'openai'
+
+const openai = new OpenAI()
 
 const evaluateSearchResults = async (userInput, results) => {
 	if (results.length === 0) return []
@@ -43,12 +45,15 @@ const evaluateSearchResults = async (userInput, results) => {
   `
 
 	try {
-		const result = await ollama.generate({
-			model: 'llama3.2',
-			prompt,
+		const response = await openai.chat.completions.create({
+			model: 'gpt-4o-mini',
+			messages: [
+				{ role: 'system', content: 'You are a helpful assistant that evaluates search results.' },
+				{ role: 'user', content: prompt },
+			],
 		})
-
-		const scores = JSON.parse(result.response)
+		const result = response.choices[0].message.content
+		const scores = JSON.parse(result, null, 2)
 		return scores
 	} catch (error) {
 		console.error('Error:', error)
