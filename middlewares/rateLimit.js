@@ -6,7 +6,7 @@ const rateLimiter = new RateLimiterRedis({
 	storeClient: redisClient, // Use the existing Redis client from connectRedis
 	points: 100, // Number of requests allowed
 	duration: 60, // Per 60 seconds
-	keyPrefix: 'rate-limiter',
+	keyPrefix: 'property-recommendation-api-rate-limiter',
 })
 
 // Middleware for rate limiting

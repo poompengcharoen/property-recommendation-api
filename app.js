@@ -1,5 +1,6 @@
+import { connectRedis, getCache, setCache } from './config/redis.js'
+
 import { connectDb } from './config/db.js'
-import { connectRedis } from './config/redis.js'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import express from 'express'
@@ -36,9 +37,27 @@ const initializeServer = async () => {
 
 app.post('/', async (req, res) => {
 	const { prompt } = req.body
+	const cacheKey = `property-recommendation-api:${req.ip}`
+	let count = 0
 
 	try {
+		const cachedData = await getCache(cacheKey)
+		const { count: cachedCount } = cachedData || {}
+		count = cachedCount ? cachedCount : count
+		const isExceedingUsageLimit = count >= 5
+
+		if (isExceedingUsageLimit) {
+			res.status(429).json({
+				success: false,
+				message: `You have exceeded the usage limit. Please try again later.`,
+			})
+			return
+		}
+
 		const { results } = await recommendProperties(prompt)
+
+		await setCache(cacheKey, { count: count + 1 }, 86400) // Cache for 24 hours
+
 		res.status(200).json({ success: true, prompt, results })
 	} catch (error) {
 		console.error(error)
