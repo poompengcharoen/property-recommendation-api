@@ -54,11 +54,17 @@ app.post('/', async (req, res) => {
 			return
 		}
 
-		const { results } = await recommendProperties(prompt)
+		const { results, preferences, cleanedPrompt } = await recommendProperties(prompt)
 
 		await setCache(cacheKey, { count: count + 1 }, 86400) // Cache for 24 hours
 
-		res.status(200).json({ success: true, prompt, results })
+		res.status(200).json({
+			success: true,
+			prompt,
+			cleanedPrompt,
+			preferences,
+			results,
+		})
 	} catch (error) {
 		console.error(error)
 		res.status(500).json({ success: false, message: error.message })

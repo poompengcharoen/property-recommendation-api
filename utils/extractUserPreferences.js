@@ -5,35 +5,48 @@ const openai = new OpenAI()
 
 // Generate the system prompt dynamically based on available property types.
 const generateSystemPrompt = (availableTypes) => `
-You are a helpful assistant that extracts user preferences from a user message into a JSON object. 
-Use the following structure and rules:
+You are a helpful assistant that reads, understands, and extracts property preferences from a user message into a JSON object.
 
-Example JSON:
+### Instructions:
+1. Extract property preferences from the user’s message using the structure below.
+2. Include only fields explicitly mentioned by the user.
+3. Use **lowercase** for all string values.
+4. Set values to \`null\` if not provided in the message.
+5. Ensure numbers are parsed as integers where applicable.
+
+### JSON Object Structure:
 {
-  "title": "Sansiri",
-  "types": ["condo", "house"],
-  "budget": 40000,
-  "currency": "THB",
-  "bedrooms": "3",
-  "bathrooms": "2",
-  "location": "Phuket",
-  "amenities": ["beach", "tennis", "court", "park", "restaurant", "shopping", "center", "pet", "friendly"],
-  "avoids": ["busy", "area", "school"]
+  "title": "string | null", // Specific name of the property or developer, if mentioned.
+  "types": ["string"] | [], // Array of property types (e.g., condo, house). Available types: ${availableTypes.join(
+		', '
+	)}.
+  "budget": "number | null", // Maximum spend amount.
+  "currency": "string | null", // Currency of the budget.
+  "bedrooms": "number | null", // Number of bedrooms (integer) or "studio" if mentioned.
+  "bathrooms": "number | null", // Number of bathrooms (integer).
+  "location": "string | null", // City and/or country where the property is located.
+  "amenities": ["string"] | [], // List of desired features, nearby locations, or keywords.
+  "avoids": ["string"] | [] // List of features, property types, or locations the user wants to avoid.
 }
 
-Dictionary:
-- Title (string): The specific name of the property or developer.
-- Types (string[]): Available types include: ${availableTypes.join(', ')}.
-- Budget (number) (optional): Maximum spend amount.
-- Currency (string): Currency of the budget.
-- Bedrooms (number): Number of bedrooms or "studio" if mentioned.
-- Bathrooms (number): Number of bathrooms.
-- Location (string): Desired location.
-- Amenities (string[]): Desired features, nearby locations, or keywords.
-- Avoids (string[]): Features, property types, or locations to avoid.
 
-All fields are optional. Skip any not mentioned.
-Only generate the JSON object, no additional text or formatting.
+### Example:
+
+**User message:**
+"I'm looking for a modern condo in Bangkok with a budget of 5,000,000 THB. It should have at least 2 bedrooms and 2 bathrooms. I'd love a swimming pool and gym nearby, but I want to avoid areas with heavy traffic."
+
+**Extracted JSON:**
+{
+  "title": null,
+  "types": ["condo"],
+  "budget": 5000000,
+  "currency": "thb",
+  "bedrooms": 2,
+  "bathrooms": 2,
+  "location": "bangkok",
+  "amenities": ["swimming pool", "gym"],
+  "avoids": ["heavy traffic"]
+}
 `
 
 // Function to extract user preferences based on user input.
@@ -42,17 +55,11 @@ const extractUserPreferences = async (userInput) => {
 		const availableTypes = await getAvailableTypes()
 		const systemPrompt = generateSystemPrompt(availableTypes)
 
-		const userPrompt = `
-    The user is asking for property recommendations. Based on their message, generate a JSON object with their preferences.
-
-    User's message: "${userInput}"
-    `
-
 		const response = await openai.chat.completions.create({
 			model: 'gpt-4o-mini',
 			messages: [
 				{ role: 'system', content: systemPrompt },
-				{ role: 'user', content: userPrompt },
+				{ role: 'user', content: userInput },
 			],
 		})
 
@@ -61,7 +68,11 @@ const extractUserPreferences = async (userInput) => {
 		if (!result) throw new Error('No response content received from OpenAI.')
 
 		const preferences = JSON.parse(result)
-		return preferences
+
+		return {
+			...preferences,
+			types: preferences.types?.map((type) => type.replace(/apartment/gi, 'condo')),
+		}
 	} catch (error) {
 		console.error('Error extracting user preferences:', error.message)
 		return null
