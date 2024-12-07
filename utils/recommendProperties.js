@@ -1,6 +1,7 @@
 import cleanPrompt from './cleanPrompt.js'
 import compileSearchQuery from './compileSearchQuery.js'
 import extractUserPreferences from './extractUserPreferences.js'
+import getResponseMessage from './getResponseMessage.js'
 import promptSearchProperties from './promptSearchProperties.js'
 
 const recommendProperties = async (prompt) => {
@@ -21,6 +22,12 @@ const recommendProperties = async (prompt) => {
 		console.log('================================================================================')
 		console.log('CLEANED PROMPT:')
 		console.log(cleanedPrompt)
+
+		// Response message
+		const message = await getResponseMessage(cleanedPrompt)
+		console.log('================================================================================')
+		console.log('MESSAGE:')
+		console.log(message)
 
 		// Extract user preferences
 		const preferences = await extractUserPreferences(cleanedPrompt)
@@ -50,6 +57,7 @@ const recommendProperties = async (prompt) => {
 			preferences,
 			query,
 			sort,
+			message,
 			results,
 		}
 	} catch (error) {

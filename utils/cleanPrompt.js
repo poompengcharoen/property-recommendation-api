@@ -2,7 +2,7 @@ import OpenAI from 'openai'
 
 const openai = new OpenAI()
 
-// Function to extract user preferences based on user input.
+// Function to clean user prompt
 const cleanPrompt = async (userInput) => {
 	try {
 		const response = await openai.chat.completions.create({
@@ -10,7 +10,7 @@ const cleanPrompt = async (userInput) => {
 			messages: [
 				{
 					role: 'system',
-					content: `You are a helpful assistant that reads, understands, and cleans a text message from a user and rewrites it into an actionable sentence. Try to understand the user's message and generate a concise, clear, and actionable sentence that can be used to perform the desired action. For example, you can try starting your sentence with "I'm looking for a".`,
+					content: `You are a helpful assistant that reads, understands, and cleans a text message from a user and rewrites it into an actionable sentence to help them find properties. Try to understand the user's message and generate a concise, clear, and actionable sentence that can be used to perform the desired action. For example, you can try starting your sentence with "I'm looking for a".`,
 				},
 				{ role: 'user', content: userInput },
 			],
@@ -22,7 +22,7 @@ const cleanPrompt = async (userInput) => {
 
 		return result
 	} catch (error) {
-		console.error('Error extracting user preferences:', error.message)
+		console.error('Error cleaning prompt:', error.message)
 		return null
 	}
 }

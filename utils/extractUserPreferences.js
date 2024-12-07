@@ -9,15 +9,15 @@ You are a helpful assistant that reads, understands, and extracts property prefe
 
 ### Instructions:
 1. Extract property preferences from the user’s message using the structure below.
-2. Include only fields explicitly mentioned by the user.
-3. Use **lowercase** for all string values.
-4. Set values to \`null\` if not provided in the message.
-5. Ensure numbers are parsed as integers where applicable.
+2. Use **lowercase** for all string values.
+3. Set values to \`null\` if not provided in the message.
+4. Ensure numbers are parsed as integers where applicable.
+5. The user may mention details of the property, such as the number of bedrooms and bathrooms by mentioning who lives in the property.
 
 ### JSON Object Structure:
 {
   "title": "string | null", // Specific name of the property or developer, if mentioned.
-  "types": ["string"] | [], // Array of property types (e.g., condo, house). Available types: ${availableTypes.join(
+  "types": ["string"] | [], // Array of applicable property types (e.g., condo, house). Available types: ${availableTypes.join(
 		', '
 	)}.
   "budget": "number | null", // Maximum spend amount.
