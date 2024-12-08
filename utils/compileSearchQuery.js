@@ -57,7 +57,9 @@ const compileSearchQuery = async (preferences) => {
 
 	// Filter by property types
 	if (types?.length) {
-		query.$and.push(...types.map((type) => ({ type: { $regex: createRegex(`^${type}$`) } })))
+		query.$and.push({
+			$or: types.map((type) => ({ type: { $regex: createRegex(`^${type.trim()}$`) } })),
+		})
 	}
 
 	// Filter by budget

@@ -23,7 +23,7 @@ You are a helpful assistant that reads, understands, and extracts property prefe
 	)}.
   "budget": "number | null", // Maximum spend amount.
   "currency": "string | null", // Currency of the budget.
-  "bedrooms": "number | null", // Number of bedrooms (integer) or "studio" if mentioned.
+  "bedrooms": "number | null", // Number of bedrooms (integer). For "studio" if mentioned, use 1.
   "bathrooms": "number | null", // Number of bathrooms (integer).
   "location": "string | null", // City and/or country where the property is located, not the user's descriptive location.
   "amenities": ["string"] | [], // List of keywords related to the desired features, nearby locations, or keywords.
@@ -72,10 +72,7 @@ const extractUserPreferences = async (userInput) => {
 
 		const preferences = JSON.parse(result)
 
-		return {
-			...preferences,
-			types: preferences.types?.map((type) => type.replace(/apartment/gi, 'condo')),
-		}
+		return preferences
 	} catch (error) {
 		console.error('Error extracting user preferences:', error.message)
 		return null
