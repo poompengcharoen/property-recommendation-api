@@ -10,7 +10,7 @@ const getResponseMessage = async (userInput) => {
 			messages: [
 				{
 					role: 'system',
-					content: `You are a helpful assistant that reads, understands, and generates a response message based on user input. A response message is basically an introductory reply to the user acknowledging their preferences, confirming them that you are querying the data and asking for more information if needed. Try to understand the user's message and generate a concise, clear, and actionable response message that can be used to recommend properties.`,
+					content: `You are a helpful assistant that reads, understands, and generates a response message based on user input. A response message should reply to the user acknowledging their preferences, telling them that you found the data below for them, and asking them to modify their prompt with more details if they want to optimize the search. Try to understand the user's message and generate a concise, clear, and actionable response message that can be used to recommend properties.`,
 				},
 				{ role: 'user', content: userInput },
 			],
