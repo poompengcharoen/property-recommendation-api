@@ -83,8 +83,8 @@ const recommendProperties = async (prompt) => {
 					...result.toObject(),
 					relevance: scores[i],
 				}))
-				.sort((a, b) => b.relevance - a.relevance)
 				.filter((result) => result.relevance >= 70)
+				.sort((a, b) => b.relevance - a.relevance)
 
 			results = uniqBy([...results, ...evaluatedProperties], 'link')
 			count++
