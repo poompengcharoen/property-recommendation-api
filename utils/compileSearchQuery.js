@@ -72,12 +72,6 @@ const compileSearchQuery = async (preferences) => {
 		query.$and.push({ bathrooms: { $gte: bathrooms } })
 	}
 
-	if (location) {
-		query.$and.push({
-			location: createRegex(tokenizeText(location).join('|')),
-		})
-	}
-
 	if (avoids) {
 		avoids.forEach((avoid) => {
 			query.$and.push({ title: { $not: { $regex: createRegex(avoid) } } })

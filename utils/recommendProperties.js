@@ -4,6 +4,7 @@ import evaluateSearchResults from './evaluateSearchResults.js'
 import extractUserPreferences from './extractUserPreferences.js'
 import fetchProperties from './fetchProperties.js'
 import getResponseMessage from './getResponseMessage.js'
+import uniqBy from 'lodash/uniqBy.js'
 
 const recommendProperties = async (prompt) => {
 	try {
@@ -56,32 +57,42 @@ const recommendProperties = async (prompt) => {
 		console.log('SORT:')
 		console.log(sort)
 
-		// Fetch properties
-		const properties = await fetchProperties(query, sort)
-		console.log('================================================================================')
-		console.log('PROPERTIES:')
-		console.log(properties)
+		let results = []
+		let count = 0
 
-		// Evaluate properties (AI)
-		const scores = await evaluateSearchResults(cleanedPrompt, properties)
-		console.log('================================================================================')
-		console.log('SCORES:')
-		console.log(scores)
+		while (results.length < 5 && count < 2) {
+			// Fetch properties
+			const properties = await fetchProperties(query, sort, 10, results)
+			console.log(
+				'================================================================================'
+			)
+			console.log('PROPERTIES:')
+			console.log(properties)
 
-		// Compile results
-		let results = properties
-			.map((property, i) => ({
-				...property.toObject(),
-				relevance: scores[i],
-			}))
-			.sort((a, b) => b.relevance - a.relevance)
+			// Evaluate properties (AI)
+			const scores = await evaluateSearchResults(cleanedPrompt, properties)
+			console.log(
+				'================================================================================'
+			)
+			console.log('SCORES:')
+			console.log(scores)
+
+			// Compile results
+			let evaluatedProperties = properties
+				.map((result, i) => ({
+					...result.toObject(),
+					relevance: scores[i],
+				}))
+				.sort((a, b) => b.relevance - a.relevance)
+				.filter((result) => result.relevance >= 70)
+
+			results = uniqBy([...results, ...evaluatedProperties], 'link')
+			count++
+		}
+
 		console.log('================================================================================')
 		console.log('RESULTS:')
 		console.log(results)
-
-		// Add related properties
-		const relatedProperties = await fetchProperties(query, sort, 5, results)
-		results = results.concat(relatedProperties)
 
 		return {
 			prompt,
