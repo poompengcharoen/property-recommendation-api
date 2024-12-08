@@ -65,7 +65,7 @@ app.post('/', async (req, res) => {
 		const cachedData = await getCache(cacheKey)
 		const { count: cachedCount } = cachedData || {}
 		count = cachedCount ? cachedCount : count
-		const isExceedingUsageLimit = count >= 5
+		const isExceedingUsageLimit = count >= 10
 
 		if (process.env.NODE_ENV === 'production' && isExceedingUsageLimit) {
 			res.status(429).json({
