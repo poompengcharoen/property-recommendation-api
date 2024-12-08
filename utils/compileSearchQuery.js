@@ -1,23 +1,8 @@
 import CC from 'currency-converter-lt'
 
 const compileSearchQuery = async (preferences) => {
-	const { title, types, budget, currency, bedrooms, bathrooms, location, amenities, avoids } =
-		preferences
-
-	const query = { $and: [], $or: [] }
-
 	// Helper to create case-insensitive regex
 	const createRegex = (value) => new RegExp(value, 'i')
-
-	// Helper to add OR conditions
-	const addOrCondition = (field, value) => {
-		query.$or.push({ [field]: { $regex: createRegex(value) } })
-	}
-
-	// Helper to add AND NOT conditions
-	const addNotCondition = (field, value) => {
-		query.$and.push({ [field]: { $not: { $regex: createRegex(value) } } })
-	}
 
 	// Helper to convert currency to THB
 	const convertCurrencyToTHB = async (amount, currency) => {
@@ -34,95 +19,67 @@ const compileSearchQuery = async (preferences) => {
 		}
 	}
 
-	// Add amenities conditions
-	if (amenities?.length) {
-		// Match amenities with the keywords array
-		query.$or.push({ keywords: { $in: amenities.map((amenity) => createRegex(amenity)) } })
+	const { title, types, budget, currency, bedrooms, bathrooms, location, amenities, avoids } =
+		preferences
 
-		// Also match amenities in title and description
-		amenities.forEach((amenity) => {
-			addOrCondition('title', amenity)
-			addOrCondition('description', amenity)
+	const budgetTHB = await convertCurrencyToTHB(budget, currency)
+
+	const query = {
+		$and: [
+			{ $text: { $search: `${title} ${location} ${types.join(' ')} ${amenities.join(' ')}` } },
+		],
+		$or: [],
+	}
+
+	if (types) {
+		types.forEach((type) => {
+			if (type === 'condo' || type === 'apartment') {
+				query.$and.push({ type: { $regex: createRegex('condo|apartment') } })
+			} else if (type === 'villa' || type === 'house' || type === 'bungalow') {
+				query.$and.push({ type: { $regex: createRegex('villa|house|bungalow') } })
+			} else {
+				query.$and.push({ type: { $regex: createRegex(type) } })
+			}
 		})
 	}
 
-	// Add title search conditions
-	if (title) {
-		const words = title.split(' ')
-		words.forEach((word) => {
-			addOrCondition('title', word)
-			addOrCondition('description', word)
-		})
-	}
-
-	// Filter by property types
-	if (types?.length) {
-		query.$and.push({
-			$or: types.map((type) => ({ type: { $regex: createRegex(`^${type.trim()}$`) } })),
-		})
-	}
-
-	// Filter by budget
 	if (budget) {
-		const budgetTHB = await convertCurrencyToTHB(budget, currency)
-		query.$and.push({
-			$or: [
-				// Include properties less than the budget
-				{ priceNumeric: { $lte: budgetTHB } },
-
-				// // Include properties that no have have priceNumeric field
-				{ priceNumeric: { $exists: false } },
-			],
-		})
+		query.$and.push({ priceNumeric: { $lte: budgetTHB } })
 	}
 
-	// Filter by bedrooms
 	if (bedrooms) {
-		if (bedrooms === 'studio' || bedrooms === '1') {
-			query.$and.push({
-				$or: [
-					{ bedrooms: { $regex: createRegex('^studio$') } },
-					{ bedrooms: { $regex: createRegex('^1$') } },
-				],
-			})
-		} else {
-			query.$and.push({ bedrooms: { $regex: createRegex(`^${bedrooms}$`) } })
-		}
+		query.$and.push({ bedrooms: { $gte: bedrooms } })
 	}
 
-	// Filter by bathrooms
 	if (bathrooms) {
-		query.$and.push({ bathrooms: { $regex: createRegex(`^${bathrooms}$`) } })
+		query.$and.push({ bathrooms: { $gte: bathrooms } })
 	}
 
-	// Filter by location
 	if (location) {
-		const locationTokens = location
-			.replace(/,/g, ' ')
-			.split(' ')
-			.map((token) => token.trim())
-
-		// Each location token can match in these fields: title, location, description
-		locationTokens.forEach((token) => {
-			addOrCondition('title', token)
-			addOrCondition('location', token)
-			addOrCondition('description', token)
+		query.$and.push({
+			location: createRegex(
+				location
+					.split(',')
+					.map((location) => location.trim())
+					.join('|')
+			),
 		})
 	}
 
-	// Exclude properties with "avoids" terms
-	if (avoids?.length) {
-		avoids.forEach((avoid) =>
-			['title', 'description', 'location'].forEach((field) => addNotCondition(field, avoid))
-		)
+	if (avoids) {
+		avoids.forEach((avoid) => {
+			query.$and.push({ title: { $not: { $regex: createRegex(avoid) } } })
+			query.$and.push({ description: { $not: { $regex: createRegex(avoid) } } })
+			query.$and.push({ location: { $not: { $regex: createRegex(avoid) } } })
+		})
 	}
 
-	// Clean up empty $or and $and
+	// Cleanup if $or or $and arrays are empty
 	if (!query.$or.length) delete query.$or
 	if (!query.$and.length) delete query.$and
 
 	// Sort properties
-	const sort = { priceNumeric: -1, keywords: -1 }
+	const sort = { score: { $meta: 'textScore' } }
 
 	return { query, sort }
 }

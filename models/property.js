@@ -21,6 +21,8 @@ const propertySchema = new mongoose.Schema(
 	}
 )
 
+propertySchema.index({ title: 'text', description: 'text', location: 'text' })
+
 const Property = mongoose.model('Property', propertySchema)
 
 export default Property

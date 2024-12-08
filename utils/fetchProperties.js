@@ -4,11 +4,16 @@ const fetchProperties = async (query, sort, limit = 10, excludingProperties = []
 	const excludeTitles = excludingProperties.map((property) => property.title)
 	const excludeLinks = excludingProperties.map((property) => property.link)
 
-	const properties = await Property.find({
-		...query,
-		title: { $nin: excludeTitles },
-		link: { $nin: excludeLinks },
-	})
+	const properties = await Property.find(
+		{
+			...query,
+			title: { $nin: excludeTitles },
+			link: { $nin: excludeLinks },
+		},
+		{
+			score: { $meta: 'textScore' },
+		}
+	)
 		.sort(sort)
 		.limit(limit)
 
