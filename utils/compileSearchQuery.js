@@ -21,6 +21,8 @@ const compileSearchQuery = async (preferences) => {
 
 	// Helper to tokenize text and remove special characters
 	const tokenizeText = (text) => {
+		if (!text) return []
+
 		const tokens = text
 			.replace(/[^a-zA-Z0-9\s]/g, ' ')
 			.split(' ')
