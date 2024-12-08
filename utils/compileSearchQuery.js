@@ -19,6 +19,15 @@ const compileSearchQuery = async (preferences) => {
 		}
 	}
 
+	// Helper to tokenize text and remove special characters
+	const tokenizeText = (text) => {
+		const tokens = text
+			.replace(/[^a-zA-Z0-9\s]/g, ' ')
+			.split(' ')
+			.filter((token) => token && token.length)
+		return tokens
+	}
+
 	const { title, types, budget, currency, bedrooms, bathrooms, location, amenities, avoids } =
 		preferences
 
@@ -26,7 +35,13 @@ const compileSearchQuery = async (preferences) => {
 
 	const query = {
 		$and: [
-			{ $text: { $search: `${title} ${location} ${types.join(' ')} ${amenities.join(' ')}` } },
+			{
+				$text: {
+					$search: `${tokenizeText(title).join(' ')} ${tokenizeText(location).join(
+						' '
+					)} ${types.join(' ')} ${amenities.join(' ')}`,
+				},
+			},
 		],
 		$or: [],
 	}
@@ -57,12 +72,7 @@ const compileSearchQuery = async (preferences) => {
 
 	if (location) {
 		query.$and.push({
-			location: createRegex(
-				location
-					.split(',')
-					.map((location) => location.trim())
-					.join('|')
-			),
+			location: createRegex(tokenizeText(location).join('|')),
 		})
 	}
 
