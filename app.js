@@ -38,7 +38,7 @@ const initializeServer = async () => {
 
 app.get('/random-prompts', async (req, res) => {
 	try {
-		const cacheKey = `property-recommendation-api:${req.ip}:random-prompts`
+		const cacheKey = `property-recommendation-api:random-prompts`
 		const cachedData = await getCache(cacheKey)
 		if (cachedData) {
 			res.status(200).json({ success: true, prompts: cachedData })
@@ -47,7 +47,7 @@ app.get('/random-prompts', async (req, res) => {
 
 		const prompts = await generateRandomPrompts()
 
-		await setCache(cacheKey, prompts, 86400) // Cache for 24 hours
+		await setCache(cacheKey, prompts, 3600) // Cache for 1 hour
 
 		res.status(200).json({ success: true, prompts })
 	} catch (error) {
