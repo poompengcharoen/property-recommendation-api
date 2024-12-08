@@ -24,28 +24,28 @@ You are a helpful assistant that reads, understands, and extracts property prefe
   "currency": "string | null", // Currency of the budget.
   "bedrooms": "number | null", // Number of bedrooms (integer) or "studio" if mentioned.
   "bathrooms": "number | null", // Number of bathrooms (integer).
-  "location": "string | null", // City and/or country where the property is located.
-  "amenities": ["string"] | [], // List of desired features, nearby locations, or keywords.
-  "avoids": ["string"] | [] // List of features, property types, or locations the user wants to avoid.
+  "location": "string | null", // City and/or country where the property is located, not the user's descriptive location.
+  "amenities": ["string"] | [], // List of keywords related to the desired features, nearby locations, or keywords.
+  "avoids": ["string"] | [] // List of keywords related to the features, property types, or locations the user wants to avoid.
 }
 
 
 ### Example:
 
 **User message:**
-"I'm looking for a modern condo in Bangkok with a budget of 5,000,000 THB. It should have at least 2 bedrooms and 2 bathrooms. I'd love a swimming pool and gym nearby, but I want to avoid areas with heavy traffic."
+"I'm looking for a modern villa in downtown Bangkok with a budget of 30,000,000 THB. It should have at least 2 bedrooms and 2 bathrooms. I'd love to have a swimming pool and gym, and I want to avoid areas with heavy traffic."
 
 **Extracted JSON:**
 {
   "title": null,
-  "types": ["condo"],
-  "budget": 5000000,
-  "currency": "thb",
+  "types": ["villa", "house"],
+  "budget": 30000000,
+  "currency": "THB",
   "bedrooms": 2,
   "bathrooms": 2,
   "location": "bangkok",
-  "amenities": ["swimming pool", "gym"],
-  "avoids": ["heavy traffic"]
+  "amenities": ["swimming pool", "gym", "downtown"],
+  "avoids": ["busy"]
 }
 `
 

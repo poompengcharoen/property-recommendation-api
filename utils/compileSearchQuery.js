@@ -95,7 +95,21 @@ const compileSearchQuery = async (preferences) => {
 
 	// Filter by location
 	if (location) {
-		query.$and.push({ location: { $regex: createRegex(location) } })
+		const locationWords = location.replace(/,/g, ' ').split(' ')
+		locationWords.forEach((word) => {
+			// Match location in location field
+			query.$and.push({
+				$or: [
+					{ location: { $regex: createRegex(word) } }, // Exact match
+					{ location: { $regex: createRegex(`^${word}`) } }, // Starts with
+					{ location: { $regex: createRegex(`${word}$`) } }, // Ends with
+				],
+			})
+
+			// Also match location in title and description
+			addOrCondition('title', word)
+			addOrCondition('description', word)
+		})
 	}
 
 	// Exclude properties with "avoids" terms
