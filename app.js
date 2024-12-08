@@ -4,6 +4,7 @@ import { connectDb } from './config/db.js'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import express from 'express'
+import generateRandomPrompts from './utils/generateRandomPrompts.js'
 import rateLimit from './middlewares/rateLimit.js'
 import recommendProperties from './utils/recommendProperties.js'
 
@@ -34,6 +35,26 @@ const initializeServer = async () => {
 		process.exit(1) // Exit the process if the database connection fails
 	}
 }
+
+app.get('/random-prompts', async (req, res) => {
+	try {
+		const cacheKey = `property-recommendation-api:${req.ip}:random-prompts`
+		const cachedData = await getCache(cacheKey)
+		if (cachedData) {
+			res.status(200).json({ success: true, prompts: cachedData })
+			return
+		}
+
+		const prompts = await generateRandomPrompts()
+
+		await setCache(cacheKey, prompts, 86400) // Cache for 24 hours
+
+		res.status(200).json({ success: true, prompts })
+	} catch (error) {
+		console.error('Error:', error)
+		res.status(500).json({ success: false, message: error.message })
+	}
+})
 
 app.post('/', async (req, res) => {
 	const { prompt } = req.body

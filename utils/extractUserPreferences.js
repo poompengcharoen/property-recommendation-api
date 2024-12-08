@@ -13,11 +13,12 @@ You are a helpful assistant that reads, understands, and extracts property prefe
 3. Set values to \`null\` if not provided in the message.
 4. Ensure numbers are parsed as integers where applicable.
 5. The user may mention details of the property, such as the number of bedrooms and bathrooms by mentioning who lives in the property.
+6. Ensure that for the types array, the values are one of the available types in the database.
 
 ### JSON Object Structure:
 {
   "title": "string | null", // Specific name of the property or developer, if mentioned.
-  "types": ["string"] | [], // Array of applicable property types (e.g., condo, house). Available types: ${availableTypes.join(
+  "types": ["string"] | [], // Array of applicable property types (e.g., condo, house). Available types in the database include: ${availableTypes.join(
 		', '
 	)}.
   "budget": "number | null", // Maximum spend amount.
@@ -54,6 +55,8 @@ const extractUserPreferences = async (userInput) => {
 	try {
 		const availableTypes = await getAvailableTypes()
 		const systemPrompt = generateSystemPrompt(availableTypes)
+
+		console.log(systemPrompt)
 
 		const response = await openai.chat.completions.create({
 			model: 'gpt-4o-mini',
