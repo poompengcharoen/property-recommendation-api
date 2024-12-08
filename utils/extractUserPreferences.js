@@ -56,8 +56,6 @@ const extractUserPreferences = async (userInput) => {
 		const availableTypes = await getAvailableTypes()
 		const systemPrompt = generateSystemPrompt(availableTypes)
 
-		console.log(systemPrompt)
-
 		const response = await openai.chat.completions.create({
 			model: 'gpt-4o-mini',
 			messages: [

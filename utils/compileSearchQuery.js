@@ -97,20 +97,16 @@ const compileSearchQuery = async (preferences) => {
 
 	// Filter by location
 	if (location) {
-		const locationWords = location.replace(/,/g, ' ').split(' ')
-		locationWords.forEach((word) => {
-			// Match location in location field
-			query.$and.push({
-				$or: [
-					{ location: { $regex: createRegex(word) } }, // Exact match
-					{ location: { $regex: createRegex(`^${word}`) } }, // Starts with
-					{ location: { $regex: createRegex(`${word}$`) } }, // Ends with
-				],
-			})
+		const locationTokens = location
+			.replace(/,/g, ' ')
+			.split(' ')
+			.map((token) => token.trim())
 
-			// Also match location in title and description
-			addOrCondition('title', word)
-			addOrCondition('description', word)
+		// Each location token can match in these fields: title, location, description
+		locationTokens.forEach((token) => {
+			addOrCondition('title', token)
+			addOrCondition('location', token)
+			addOrCondition('description', token)
 		})
 	}
 
