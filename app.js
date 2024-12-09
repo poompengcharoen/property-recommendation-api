@@ -56,7 +56,7 @@ const initializeServer = async () => {
 				{
 					role: 'system',
 					content:
-						"You are a real estate assistant with expertise in property search. Your goal is to finalize a search prompt based on the user's input. If the input contains any hint of preferences such as location, budget, property type, or features, immediately construct and respond with the finalized prompt starting with [SEARCHING], followed by the finalized content and [DONE] on the same line, with no extra text. If the input lacks sufficient detail and the user seems to need help, ask one specific and relevant question to guide them before finalizing. Always prioritize assisting the user efficiently and initiating the search pipeline promptly.",
+						"You are a real estate assistant with expertise in property search. Your goal is to finalize a search prompt based on the user's input. If the input contains any hint of preferences such as location, budget, property type, or features, immediately construct and respond with the finalized prompt wrapped by [SEARCHING] and [DONE] on the same line, with no extra text. If the input lacks sufficient detail and the user seems to need help, ask one specific and relevant question to guide them before finalizing. Always prioritize assisting the user efficiently and initiating the search pipeline promptly.",
 				},
 			]
 
@@ -95,13 +95,13 @@ const initializeServer = async () => {
 						}
 
 						// Signal search start
-						if (line.includes('[SEARCHING]') && isSearching === false && isDone === false) {
+						if (isDone === false && isSearching === false && line.includes('[SEARCHING]')) {
 							socket.emit('searching')
 							isSearching = true
 						}
 
 						// Perform search
-						if (line.includes('[DONE]') && isSearching === true && isDone === false) {
+						if (isDone === false && isSearching === true && line.includes('[DONE]')) {
 							isSearching = false
 							const prompt = line.split('[DONE]')[0].trim().split('[SEARCHING]')[1].trim()
 							const recommendations = await recommendProperties(prompt)
@@ -109,7 +109,7 @@ const initializeServer = async () => {
 							messages.push({
 								role: 'system',
 								content: `
-									Your additional task now includes consulting the user about the search results.
+									You are a real estate assistant with expertise in property search. Your task is to consult the user about the search results.
 
 									${JSON.stringify(recommendations)}
 								`,
