@@ -30,8 +30,18 @@ const compileSearchQuery = async (preferences) => {
 		return tokens
 	}
 
-	const { title, types, budget, currency, bedrooms, bathrooms, location, amenities, avoids } =
-		preferences
+	const {
+		title,
+		types,
+		budget,
+		currency,
+		bedrooms,
+		bathrooms,
+		location,
+		amenities,
+		avoids,
+		isRent,
+	} = preferences
 
 	const budgetTHB = await convertCurrencyToTHB(budget, currency)
 
@@ -39,9 +49,9 @@ const compileSearchQuery = async (preferences) => {
 		$and: [
 			{
 				$text: {
-					$search: `${tokenizeText(title).join(' ')} ${tokenizeText(location).join(
-						' '
-					)} ${types.join(' ')} ${amenities.join(' ')}`,
+					$search: `${isRent ? 'rent' : ''} ${tokenizeText(title).join(' ')} ${tokenizeText(
+						location
+					).join(' ')} ${types.join(' ')} ${amenities.join(' ')}`,
 				},
 			},
 		],

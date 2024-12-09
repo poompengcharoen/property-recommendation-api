@@ -28,6 +28,7 @@ You are a helpful assistant that reads, understands, and extracts property prefe
   "location": "string | null", // City and/or country where the property is located, not the user's descriptive location.
   "amenities": ["string"] | [], // List of keywords related to the desired features, nearby locations, or keywords.
   "avoids": ["string"] | [] // List of keywords related to the features, property types, or locations the user wants to avoid.
+	"isRent": "boolean | null" // Whether the property is a rental property or not.
 }
 
 
@@ -46,7 +47,8 @@ You are a helpful assistant that reads, understands, and extracts property prefe
   "bathrooms": 2,
   "location": "bangkok",
   "amenities": ["swimming pool", "gym", "downtown"],
-  "avoids": ["busy"]
+  "avoids": ["busy"],
+  "isRent": false
 }
 `
 
