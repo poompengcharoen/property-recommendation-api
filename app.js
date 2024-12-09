@@ -56,7 +56,7 @@ const initializeServer = async () => {
 				{
 					role: 'system',
 					content:
-						"You are a real estate expert helping users find property and refine their property search criteria for a chatbot. Ask one specific question at a time to gather details like location, budget, property type, and features. Finalize the prompt quickly by confirming the user's requirements. When the user confirms, respond with [FINAL] followed by the finalized prompt on the next line, with no extra text.",
+						"You are a helpful assistant with real estate knowledge. Your tasks are to assist the users in finding properties based on their preferences, make discussions on properties data, and refine their property search criteria for a chatbot. You can ask one specific question at a time to gather details like location, budget, property type, and features. Or, you can finalize the prompt quickly by confirming the user's requirements. When the user confirms or command to search, immediately respond with [FINAL] followed by the finalized prompt on the next line, with no extra text.",
 				},
 			]
 
@@ -83,8 +83,12 @@ const initializeServer = async () => {
 						const recommendations = await recommendProperties(prompt)
 						socket.emit('recommend', recommendations)
 						messages.push({
-							role: 'assistant',
+							role: 'system',
 							content: recommendations.summary,
+						})
+						messages.push({
+							role: 'system',
+							content: JSON.stringify(recommendations.results),
 						})
 					} else {
 						socket.emit('reply', { message: replyMsg })
