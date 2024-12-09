@@ -2,6 +2,7 @@ import { connectRedis, getCache, setCache } from './config/redis.js'
 
 import OpenAI from 'openai'
 import { Server } from 'socket.io'
+import axios from 'axios'
 import { connectDb } from './config/db.js'
 import cors from 'cors'
 import { createServer } from 'http'
@@ -19,6 +20,11 @@ dotenv.config({
 
 const app = express()
 const PORT = process.env.PORT || 3000
+
+const API_URL =
+	process.env.NODE_ENV === 'production'
+		? 'https://api.poompengcharoen.dev'
+		: 'http://localhost:3000'
 
 app.set('trust proxy', true)
 app.use(express.json())
@@ -48,22 +54,51 @@ const initializeServer = async () => {
 		})
 
 		// Socket.IO connection event
-		io.on('connection', (socket) => {
+		io.on('connection', async (socket) => {
 			console.log(`Socket connected: ${socket.id}`)
 
 			let count = 0
+			const ipAddress =
+				socket.handshake.headers['x-forwarded-for']?.split(',')[0].trim() ||
+				socket.handshake.address // Fallback to address if no header
+			const cacheKey = `property-recommendation-api:${ipAddress}`
+			const cachedData = await getCache(cacheKey)
+			const { count: cachedCount, usedTicket: cachedUsedTicket } = cachedData || {}
+			count = cachedCount ? cachedCount : count
+			socket.emit('count-tick', count)
+
+			socket.on('checkout-completed', async (sessionID) => {
+				try {
+					const res = await axios.post(`${API_URL}/transactions/track`, {
+						sessionID,
+					})
+
+					if (res.status === 200) {
+						const paymentSession = res.data.session
+
+						if (paymentSession.payment_status === 'paid' && cachedUsedTicket !== sessionID) {
+							count = 0
+							await setCache(cacheKey, { count: 0, usedTicket: sessionID }, 86400)
+							socket.emit('count-tick', count)
+						}
+					}
+				} catch (error) {
+					console.error('Error:', error)
+				}
+			})
+
 			const messages = [
 				{
 					role: 'system',
 					content:
-						"You are a real estate assistant with expertise in property search. Your goal is to finalize a search prompt based on the user's input. If the input contains any hint of preferences such as location, budget, property type, or features, immediately construct and respond with the finalized prompt starting with [SEARCHING], followed by the finalized content and [DONE] on the same line, with no extra text. If the input lacks sufficient detail and the user seems to need help, ask one specific and relevant question to guide them before finalizing. Always prioritize assisting the user efficiently and initiating the search pipeline promptly.",
+						"You are a smart, analytical, and helpful assistant with expertise in property search. If the user prompt a direct command, do it. Otherwise, your goal is to finalize a search prompt based on the user's input. If the input contains any hint of preferences such as location, budget, property type, or features, immediately construct and respond with the finalized prompt wrapped by [SEARCHING] and [DONE] on the same line, with no extra text. If the input lacks sufficient detail and the user seems to need help, ask one specific and relevant question to guide them before finalizing. Always prioritize assisting the user efficiently and initiating the search pipeline promptly. Respond in the language that the user is using.",
 				},
 			]
 
 			socket.on('chat', async (data) => {
-				console.log(`Received data: ${data}`)
+				console.log(`[chat] ${req.ip}: ${data}`)
 
-				if (process.env.NODE_ENV === 'production' && count > 100) {
+				if (process.env.NODE_ENV === 'production' && count >= 10) {
 					socket.emit('rate-limit')
 					return
 				}
@@ -95,30 +130,34 @@ const initializeServer = async () => {
 						}
 
 						// Signal search start
-						if (line.includes('[SEARCHING]') && isSearching === false && isDone === false) {
+						if (isDone === false && isSearching === false && line.includes('[SEARCHING]')) {
 							socket.emit('searching')
 							isSearching = true
 						}
 
 						// Perform search
-						if (line.includes('[DONE]') && isSearching === true && isDone === false) {
-							const prompt = line.split('[DONE]')[0].trim()
+						if (isDone === false && isSearching === true && line.includes('[DONE]')) {
+							isSearching = false
+							const prompt = line.split('[DONE]')[0].trim().split('[SEARCHING]')[1].trim()
 							const recommendations = await recommendProperties(prompt)
 							socket.emit('recommend', recommendations)
 							messages.push({
-								role: 'system',
+								role: 'user',
 								content: `
-									Your additional task now includes consulting the user about the search results.
+									Search results:
 
-									${JSON.stringify(recommendations)}
+									${JSON.stringify(recommendations.results)}
 								`,
 							})
 							isDone = true
-							isSearching = false
 						}
 					}
 
+					socket.emit('end-stream')
+
 					count++
+					await setCache(cacheKey, { count, usedTicket: cachedUsedTicket || '' }, 86400) // Cache for 24 hours
+					socket.emit('count-tick', count)
 				} catch (error) {
 					console.error('Error:', error)
 					socket.emit('reply', {
@@ -138,8 +177,6 @@ const initializeServer = async () => {
 	}
 }
 
-// HTTP API
-
 app.get('/random-prompts', async (req, res) => {
 	try {
 		const cacheKey = `property-recommendation-api:random-prompts`
@@ -156,42 +193,6 @@ app.get('/random-prompts', async (req, res) => {
 		res.status(200).json({ success: true, prompts })
 	} catch (error) {
 		console.error('Error:', error)
-		res.status(500).json({ success: false, message: error.message })
-	}
-})
-
-app.post('/', async (req, res) => {
-	const { prompt } = req.body
-	const cacheKey = `property-recommendation-api:${req.ip}`
-	let count = 0
-
-	try {
-		const cachedData = await getCache(cacheKey)
-		const { count: cachedCount } = cachedData || {}
-		count = cachedCount ? cachedCount : count
-		const isExceedingUsageLimit = count >= 10
-
-		if (process.env.NODE_ENV === 'production' && isExceedingUsageLimit) {
-			res.status(429).json({
-				success: false,
-				message: `You have exceeded the usage limit. Please try again later.`,
-			})
-			return
-		}
-
-		// Recommend properties
-		const { results, preferences } = await recommendProperties(prompt)
-
-		await setCache(cacheKey, { count: count + 1 }, 86400) // Cache for 24 hours
-
-		res.status(200).json({
-			success: true,
-			prompt,
-			preferences,
-			results,
-		})
-	} catch (error) {
-		console.error(error)
 		res.status(500).json({ success: false, message: error.message })
 	}
 })

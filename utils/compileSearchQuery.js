@@ -83,7 +83,12 @@ const compileSearchQuery = async (preferences) => {
 	}
 
 	if (avoids) {
-		avoids.forEach((avoid) => {
+		let finalAvoids = avoids
+		if (!isRent) {
+			finalAvoids = [...avoids, 'rent']
+		}
+
+		finalAvoids.forEach((avoid) => {
 			query.$and.push({ title: { $not: { $regex: createRegex(avoid) } } })
 			query.$and.push({ description: { $not: { $regex: createRegex(avoid) } } })
 			query.$and.push({ location: { $not: { $regex: createRegex(avoid) } } })
