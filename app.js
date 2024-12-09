@@ -107,11 +107,11 @@ const initializeServer = async () => {
 							const recommendations = await recommendProperties(prompt)
 							socket.emit('recommend', recommendations)
 							messages.push({
-								role: 'system',
+								role: 'user',
 								content: `
-									You are a real estate assistant with expertise in property search. Your task is to consult the user about the search results.
+									Search results:
 
-									${JSON.stringify(recommendations)}
+									${JSON.stringify(recommendations.results)}
 								`,
 							})
 							isDone = true
