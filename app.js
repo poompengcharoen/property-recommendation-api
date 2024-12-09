@@ -56,7 +56,7 @@ const initializeServer = async () => {
 				{
 					role: 'system',
 					content:
-						"You are a helpful assistant with real estate knowledge. Your tasks are to assist the users in finding properties based on their preferences, make discussions on properties data, and refine their property search criteria for a chatbot. You can ask one specific question at a time to gather details like location, budget, property type, and features. Or, you can finalize the prompt quickly by confirming the user's requirements. When the user confirms or command to search, immediately respond with the finalized prompt followed by [FINAL] on the same line, with no extra text.",
+						"You are a real estate assistant with expertise in property search. Your goal is to finalize a search prompt based on the user's input. If the input contains any hint of preferences such as location, budget, property type, or features, immediately construct and respond with the finalized prompt starting with [SEARCHING], followed by the finalized content and [DONE] on the same line, with no extra text. If the input lacks sufficient detail and the user seems to need help, ask one specific and relevant question to guide them before finalizing. Always prioritize assisting the user efficiently and initiating the search pipeline promptly.",
 				},
 			]
 
@@ -81,34 +81,37 @@ const initializeServer = async () => {
 						stream: true,
 					})
 
+					// Handle search and recommendation
 					let line = ''
 					let isSearching = false
+					let isDone = false
 
 					for await (const chunk of stream) {
 						const token = chunk.choices[0]?.delta?.content || ''
 						line += token
 						socket.emit('stream', token)
-						if (line.includes('[FINAL]')) {
+
+						// Signal search start
+						if (line.includes('[SEARCHING]') && isSearching === false) {
+							socket.emit('searching')
 							isSearching = true
 						}
-					}
 
-					socket.emit('done')
-
-					if (isSearching) {
-						socket.emit('searching')
-
-						const prompt = line.split('[FINAL]')[0].trim()
-						const recommendations = await recommendProperties(prompt)
-						socket.emit('recommend', recommendations)
-						messages.push({
-							role: 'user',
-							content: JSON.stringify(recommendations),
-						})
-						messages.push({
-							role: 'system',
-							content: `Your additional task now includes consulting the user about the search results.`,
-						})
+						// Perform search
+						if (line.includes('[DONE]') && isSearching === true && isDone === false) {
+							const prompt = line.split('[DONE]')[0].trim()
+							const recommendations = await recommendProperties(prompt)
+							socket.emit('recommend', recommendations)
+							messages.push({
+								role: 'user',
+								content: JSON.stringify(recommendations),
+							})
+							messages.push({
+								role: 'system',
+								content: `Your additional task now includes consulting the user about the search results.`,
+							})
+							isDone = true
+						}
 					}
 
 					count++
@@ -130,6 +133,8 @@ const initializeServer = async () => {
 		process.exit(1) // Exit the process if the database connection fails
 	}
 }
+
+// HTTP API
 
 app.get('/random-prompts', async (req, res) => {
 	try {
@@ -171,14 +176,13 @@ app.post('/', async (req, res) => {
 		}
 
 		// Recommend properties
-		const { results, preferences, cleanedPrompt } = await recommendProperties(prompt)
+		const { results, preferences } = await recommendProperties(prompt)
 
 		await setCache(cacheKey, { count: count + 1 }, 86400) // Cache for 24 hours
 
 		res.status(200).json({
 			success: true,
 			prompt,
-			cleanedPrompt,
 			preferences,
 			results,
 		})

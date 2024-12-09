@@ -1,4 +1,3 @@
-import cleanPrompt from './cleanPrompt.js'
 import compileSearchQuery from './compileSearchQuery.js'
 import evaluateSearchResults from './evaluateSearchResults.js'
 import extractUserPreferences from './extractUserPreferences.js'
@@ -18,14 +17,8 @@ const recommendProperties = async (prompt) => {
 		console.log('PROMPT:')
 		console.log(prompt)
 
-		// Clear user prompt
-		const cleanedPrompt = await cleanPrompt(prompt)
-		console.log('================================================================================')
-		console.log('CLEANED PROMPT:')
-		console.log(cleanedPrompt)
-
 		// Extract user preferences (AI)
-		const preferences = await extractUserPreferences(cleanedPrompt)
+		const preferences = await extractUserPreferences(prompt)
 		console.log('================================================================================')
 		console.log('PREFERENCES:')
 		console.log(preferences)
@@ -63,7 +56,7 @@ const recommendProperties = async (prompt) => {
 			console.log(properties)
 
 			// Evaluate properties (AI)
-			const scores = await evaluateSearchResults(cleanedPrompt, properties)
+			const scores = await evaluateSearchResults(prompt, properties)
 			console.log(
 				'================================================================================'
 			)
@@ -89,7 +82,6 @@ const recommendProperties = async (prompt) => {
 
 		return {
 			prompt,
-			cleanedPrompt,
 			preferences,
 			query,
 			sort,
