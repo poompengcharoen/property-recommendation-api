@@ -10,6 +10,7 @@ import express from 'express'
 import generateRandomPrompts from './utils/generateRandomPrompts.js'
 import rateLimit from './middlewares/rateLimit.js'
 import recommendProperties from './utils/recommendProperties.js'
+import summarizeResults from './utils/summarizeResults.js'
 
 const openai = new OpenAI()
 
@@ -79,17 +80,19 @@ const initializeServer = async () => {
 
 					if (replyMsg.includes('[FINAL]')) {
 						socket.emit('searching')
+
 						const prompt = replyMsg.split('[FINAL]')[1].trim()
 						const recommendations = await recommendProperties(prompt)
 						socket.emit('recommend', recommendations)
 						messages.push({
-							role: 'system',
-							content: recommendations.summary,
+							role: 'user',
+							content: JSON.stringify(recommendations),
 						})
-						messages.push({
-							role: 'system',
-							content: JSON.stringify(recommendations.results),
-						})
+
+						socket.emit('summarizing')
+						const summary = await summarizeResults(prompt, recommendations.results)
+						socket.emit('reply', { message: summary })
+						messages.push({ role: 'user', content: summary })
 					} else {
 						socket.emit('reply', { message: replyMsg })
 					}
@@ -154,7 +157,7 @@ app.post('/', async (req, res) => {
 		}
 
 		// Recommend properties
-		const { results, preferences, cleanedPrompt, summary } = await recommendProperties(prompt)
+		const { results, preferences, cleanedPrompt } = await recommendProperties(prompt)
 
 		await setCache(cacheKey, { count: count + 1 }, 86400) // Cache for 24 hours
 
@@ -164,7 +167,6 @@ app.post('/', async (req, res) => {
 			cleanedPrompt,
 			preferences,
 			results,
-			summary,
 		})
 	} catch (error) {
 		console.error(error)

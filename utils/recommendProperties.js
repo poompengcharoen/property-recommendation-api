@@ -3,7 +3,6 @@ import compileSearchQuery from './compileSearchQuery.js'
 import evaluateSearchResults from './evaluateSearchResults.js'
 import extractUserPreferences from './extractUserPreferences.js'
 import fetchProperties from './fetchProperties.js'
-import summarizeResults from './summarizeResults.js'
 import uniqBy from 'lodash/uniqBy.js'
 
 const recommendProperties = async (prompt) => {
@@ -88,12 +87,6 @@ const recommendProperties = async (prompt) => {
 		console.log('RESULTS:')
 		console.log(results)
 
-		// Summarize results
-		const summary = await summarizeResults(prompt, results)
-		console.log('================================================================================')
-		console.log('SUMMARY:')
-		console.log(summary)
-
 		return {
 			prompt,
 			cleanedPrompt,
@@ -101,7 +94,6 @@ const recommendProperties = async (prompt) => {
 			query,
 			sort,
 			results,
-			summary,
 		}
 	} catch (error) {
 		console.error('Error:', error)
