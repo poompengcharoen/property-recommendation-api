@@ -106,12 +106,12 @@ const initializeServer = async () => {
 							const recommendations = await recommendProperties(prompt)
 							socket.emit('recommend', recommendations)
 							messages.push({
-								role: 'user',
-								content: JSON.stringify(recommendations),
-							})
-							messages.push({
 								role: 'system',
-								content: `Your additional task now includes consulting the user about the search results.`,
+								content: `
+									Your additional task now includes consulting the user about the search results.
+
+									${JSON.stringify(recommendations)}
+								`,
 							})
 							isDone = true
 							isSearching = false
