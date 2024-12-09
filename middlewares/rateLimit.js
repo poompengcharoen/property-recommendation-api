@@ -12,7 +12,9 @@ const rateLimiter = new RateLimiterRedis({
 // Middleware for rate limiting
 const rateLimit = async (req, res, next) => {
 	try {
-		await rateLimiter.consume(req.ip) // Use IP as a unique identifier
+		if (process.env.NODE_ENV === 'production') {
+			await rateLimiter.consume(req.ip) // Use IP as a unique identifier
+		}
 		next()
 	} catch (err) {
 		res.status(429).json({
