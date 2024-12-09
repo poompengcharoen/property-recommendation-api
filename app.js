@@ -1,12 +1,17 @@
 import { connectRedis, getCache, setCache } from './config/redis.js'
 
+import OpenAI from 'openai'
+import { Server } from 'socket.io'
 import { connectDb } from './config/db.js'
 import cors from 'cors'
+import { createServer } from 'http'
 import dotenv from 'dotenv'
 import express from 'express'
 import generateRandomPrompts from './utils/generateRandomPrompts.js'
 import rateLimit from './middlewares/rateLimit.js'
 import recommendProperties from './utils/recommendProperties.js'
+
+const openai = new OpenAI()
 
 dotenv.config({
 	path: '.env.local',
@@ -20,15 +25,84 @@ app.use(express.json())
 app.use(cors())
 app.use(rateLimit)
 
+// Create an HTTP server
+const httpServer = createServer(app)
+
+// Initialize Socket.IO
+const io = new Server(httpServer, {
+	cors: {
+		origin: '*', // Adjust to your frontend's domain in production
+		methods: ['GET', 'POST'],
+	},
+})
+
 // Ensure database connection is established during server startup
 const initializeServer = async () => {
 	try {
 		await connectDb()
 		await connectRedis()
 
-		// Start the server
-		app.listen(PORT, () => {
+		// Start the HTTP server (with Socket.IO attached)
+		httpServer.listen(PORT, () => {
 			console.log(`Server is running on port ${PORT}`)
+		})
+
+		// Socket.IO connection event
+		io.on('connection', (socket) => {
+			console.log(`Socket connected: ${socket.id}`)
+
+			let count = 0
+			const messages = [
+				{
+					role: 'system',
+					content:
+						"You are a real estate expert helping users find property and refine their property search criteria for a chatbot. Ask one specific question at a time to gather details like location, budget, property type, and features. Finalize the prompt quickly by confirming the user's requirements. When the user confirms, respond with [FINAL] followed by the finalized prompt on the next line, with no extra text.",
+				},
+			]
+
+			socket.on('chat', async (data) => {
+				console.log(`Received data: ${data}`)
+
+				if (process.env.NODE_ENV === 'production' && count > 100) {
+					socket.emit('rate-limit')
+					return
+				}
+
+				messages.push({ role: 'user', content: data })
+
+				try {
+					const response = await openai.chat.completions.create({
+						model: 'gpt-4o',
+						messages,
+					})
+					const replyMsg = response.choices[0]?.message?.content?.trim()
+
+					if (replyMsg.includes('[FINAL]')) {
+						socket.emit('searching')
+						const prompt = replyMsg.split('[FINAL]')[1].trim()
+						const recommendations = await recommendProperties(prompt)
+						socket.emit('recommend', recommendations)
+						messages.push({
+							role: 'assistant',
+							content: recommendations.summary,
+						})
+					} else {
+						socket.emit('reply', { message: replyMsg })
+					}
+
+					count++
+				} catch (error) {
+					console.error('Error:', error)
+					socket.emit('reply', {
+						message: 'Sorry, I could not process your request. Please try again later.',
+					})
+				}
+			})
+
+			// Handle disconnection
+			socket.on('disconnect', () => {
+				console.log(`Socket disconnected: ${socket.id}`)
+			})
 		})
 	} catch (error) {
 		console.error('Failed to connect to the database:', error)
@@ -75,9 +149,8 @@ app.post('/', async (req, res) => {
 			return
 		}
 
-		const { message, results, preferences, cleanedPrompt, summary } = await recommendProperties(
-			prompt
-		)
+		// Recommend properties
+		const { results, preferences, cleanedPrompt, summary } = await recommendProperties(prompt)
 
 		await setCache(cacheKey, { count: count + 1 }, 86400) // Cache for 24 hours
 
@@ -86,7 +159,6 @@ app.post('/', async (req, res) => {
 			prompt,
 			cleanedPrompt,
 			preferences,
-			message,
 			results,
 			summary,
 		})

@@ -3,7 +3,6 @@ import compileSearchQuery from './compileSearchQuery.js'
 import evaluateSearchResults from './evaluateSearchResults.js'
 import extractUserPreferences from './extractUserPreferences.js'
 import fetchProperties from './fetchProperties.js'
-import getResponseMessage from './getResponseMessage.js'
 import summarizeResults from './summarizeResults.js'
 import uniqBy from 'lodash/uniqBy.js'
 
@@ -25,12 +24,6 @@ const recommendProperties = async (prompt) => {
 		console.log('================================================================================')
 		console.log('CLEANED PROMPT:')
 		console.log(cleanedPrompt)
-
-		// Response message
-		const message = await getResponseMessage(cleanedPrompt)
-		console.log('================================================================================')
-		console.log('MESSAGE:')
-		console.log(message)
 
 		// Extract user preferences (AI)
 		const preferences = await extractUserPreferences(cleanedPrompt)
@@ -107,7 +100,6 @@ const recommendProperties = async (prompt) => {
 			preferences,
 			query,
 			sort,
-			message,
 			results,
 			summary,
 		}

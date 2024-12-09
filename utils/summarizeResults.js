@@ -4,8 +4,12 @@ const openai = new OpenAI()
 
 const summarizeResults = async (prompt, results) => {
 	try {
+		if (!results || results.length === 0) {
+			return
+		}
+
 		const systemPrompt = `
-			Based on the prompt and the results, make a summary for me. Use tables or diagrams if necessary. Rearrange, sort, or clean the data if needed. You may suggest alternative prompts for the user if needed.
+			Based on the prompt and the results, make a short summary for me. Use tables or diagrams if necessary. Rearrange, sort, or clean the data if needed. You may suggest alternative prompts for the user if needed.
 
 			Prompt: ${prompt}
 			
