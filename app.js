@@ -89,10 +89,13 @@ const initializeServer = async () => {
 					for await (const chunk of stream) {
 						const token = chunk.choices[0]?.delta?.content || ''
 						line += token
-						socket.emit('stream', token)
+
+						if (!isSearching) {
+							socket.emit('stream', token)
+						}
 
 						// Signal search start
-						if (line.includes('[SEARCHING]') && isSearching === false) {
+						if (line.includes('[SEARCHING]') && isSearching === false && isDone === false) {
 							socket.emit('searching')
 							isSearching = true
 						}
@@ -111,6 +114,7 @@ const initializeServer = async () => {
 								content: `Your additional task now includes consulting the user about the search results.`,
 							})
 							isDone = true
+							isSearching = false
 						}
 					}
 
