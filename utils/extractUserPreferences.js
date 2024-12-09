@@ -62,6 +62,7 @@ const extractUserPreferences = async (userInput) => {
 				{ role: 'system', content: systemPrompt },
 				{ role: 'user', content: userInput },
 			],
+			response_format: { type: 'json_object' },
 		})
 
 		// Parse and return the extracted preferences.
