@@ -102,7 +102,7 @@ const initializeServer = async () => {
 
 						// Perform search
 						if (line.includes('[DONE]') && isSearching === true && isDone === false) {
-							const prompt = line.split('[DONE]')[0].trim()
+							const prompt = line.split('[DONE]')[0].trim().split('[SEARCHING]')[1].trim()
 							const recommendations = await recommendProperties(prompt)
 							socket.emit('recommend', recommendations)
 							messages.push({
