@@ -91,7 +91,7 @@ const initializeServer = async () => {
 
 						socket.emit('summarizing')
 						const summary = await summarizeResults(prompt, recommendations.results)
-						socket.emit('reply', { message: summary })
+						socket.emit('report-summary', { message: summary })
 						messages.push({ role: 'user', content: summary })
 					} else {
 						socket.emit('reply', { message: replyMsg })
