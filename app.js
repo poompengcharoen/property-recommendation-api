@@ -10,7 +10,6 @@ import express from 'express'
 import generateRandomPrompts from './utils/generateRandomPrompts.js'
 import rateLimit from './middlewares/rateLimit.js'
 import recommendProperties from './utils/recommendProperties.js'
-import summarizeResults from './utils/summarizeResults.js'
 
 const openai = new OpenAI()
 
@@ -57,7 +56,7 @@ const initializeServer = async () => {
 				{
 					role: 'system',
 					content:
-						"You are a helpful assistant with real estate knowledge. Your tasks are to assist the users in finding properties based on their preferences, make discussions on properties data, and refine their property search criteria for a chatbot. You can ask one specific question at a time to gather details like location, budget, property type, and features. Or, you can finalize the prompt quickly by confirming the user's requirements. When the user confirms or command to search, immediately respond with [FINAL] followed by the finalized prompt on the next line, with no extra text.",
+						"You are a helpful assistant with real estate knowledge. Your tasks are to assist the users in finding properties based on their preferences, make discussions on properties data, and refine their property search criteria for a chatbot. You can ask one specific question at a time to gather details like location, budget, property type, and features. Or, you can finalize the prompt quickly by confirming the user's requirements. When the user confirms or command to search, immediately respond with the finalized prompt followed by [FINAL] on the same line, with no extra text.",
 				},
 			]
 
@@ -72,29 +71,44 @@ const initializeServer = async () => {
 				messages.push({ role: 'user', content: data })
 
 				try {
-					const response = await openai.chat.completions.create({
+					socket.emit('reply', {
+						message: '',
+					})
+
+					const stream = await openai.chat.completions.create({
 						model: 'gpt-4o',
 						messages,
+						stream: true,
 					})
-					const replyMsg = response.choices[0]?.message?.content?.trim()
 
-					if (replyMsg.includes('[FINAL]')) {
+					let line = ''
+					let isSearching = false
+
+					for await (const chunk of stream) {
+						const token = chunk.choices[0]?.delta?.content || ''
+						line += token
+						socket.emit('stream', token)
+						if (line.includes('[FINAL]')) {
+							isSearching = true
+						}
+					}
+
+					socket.emit('done')
+
+					if (isSearching) {
 						socket.emit('searching')
 
-						const prompt = replyMsg.split('[FINAL]')[1].trim()
+						const prompt = line.split('[FINAL]')[0].trim()
 						const recommendations = await recommendProperties(prompt)
 						socket.emit('recommend', recommendations)
 						messages.push({
 							role: 'user',
 							content: JSON.stringify(recommendations),
 						})
-
-						socket.emit('summarizing')
-						const summary = await summarizeResults(prompt, recommendations.results)
-						socket.emit('report-summary', { message: summary })
-						messages.push({ role: 'user', content: summary })
-					} else {
-						socket.emit('reply', { message: replyMsg })
+						messages.push({
+							role: 'system',
+							content: `Your additional task now includes consulting the user about the search results.`,
+						})
 					}
 
 					count++
