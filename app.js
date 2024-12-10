@@ -48,10 +48,17 @@ const initializeServer = async () => {
 		})
 
 		// Socket.IO connection event
-		io.on('connection', (socket) => {
+		io.on('connection', async (socket) => {
 			console.log(`Socket connected: ${socket.id}`)
 
 			let count = 0
+			const ipAddress = socket.handshake.address
+			const cacheKey = `property-recommendation-api:${ipAddress}`
+			const cachedData = await getCache(cacheKey)
+			const { count: cachedCount } = cachedData || {}
+			count = cachedCount ? cachedCount : count
+			socket.emit('count-tick', count)
+
 			const messages = [
 				{
 					role: 'system',
@@ -59,6 +66,12 @@ const initializeServer = async () => {
 						"You are a real estate assistant with expertise in property search. If the user prompt a direct command, do it. Otherwise, your goal is to finalize a search prompt based on the user's input. If the input contains any hint of preferences such as location, budget, property type, or features, immediately construct and respond with the finalized prompt wrapped by [SEARCHING] and [DONE] on the same line, with no extra text. If the input lacks sufficient detail and the user seems to need help, ask one specific and relevant question to guide them before finalizing. Always prioritize assisting the user efficiently and initiating the search pipeline promptly.",
 				},
 			]
+
+			socket.on('checkout-completed', async (data) => {
+				console.log(`Received data: ${data}`)
+				count = 0
+				await setCache(cacheKey, { count: 0 }, 86400)
+			})
 
 			socket.on('chat', async (data) => {
 				console.log(`Received data: ${data}`)
@@ -118,7 +131,11 @@ const initializeServer = async () => {
 						}
 					}
 
+					socket.emit('end-stream')
+
 					count++
+					await setCache(cacheKey, { count }, 86400) // Cache for 24 hours
+					socket.emit('count-tick', count)
 				} catch (error) {
 					console.error('Error:', error)
 					socket.emit('reply', {

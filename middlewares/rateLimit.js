@@ -4,8 +4,8 @@ import { redisClient } from '../config/redis.js'
 // Set up Redis-based rate limiter
 const rateLimiter = new RateLimiterRedis({
 	storeClient: redisClient, // Use the existing Redis client from connectRedis
-	points: 100, // Number of requests allowed
-	duration: 86400, // Per 1 day
+	points: 20, // Number of requests allowed
+	duration: 60, // Per 1-minute window
 	keyPrefix: 'property-recommendation-api-rate-limiter',
 })
 
