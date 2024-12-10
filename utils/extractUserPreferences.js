@@ -21,7 +21,7 @@ You are a helpful assistant that reads, understands, and extracts property prefe
   "types": ["string"] | [], // Array of applicable property types (e.g., condo, house). Available types in the database include: ${availableTypes.join(
 		', '
 	)}.
-  "budget": "number | null", // Maximum spend amount.
+  "budget": "number | null", // Maximum budget when buying the property or monthly rent budget.
   "currency": "string | null", // Currency of the budget.
   "bedrooms": "number | null", // Number of bedrooms (integer). For "studio" if mentioned, use 1.
   "bathrooms": "number | null", // Number of bathrooms (integer).
