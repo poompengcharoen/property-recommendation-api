@@ -76,7 +76,7 @@ const initializeServer = async () => {
 			socket.on('chat', async (data) => {
 				console.log(`Received data: ${data}`)
 
-				if (process.env.NODE_ENV === 'production' && count > 100) {
+				if (process.env.NODE_ENV === 'production' && count > 20) {
 					socket.emit('rate-limit')
 					return
 				}
