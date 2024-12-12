@@ -96,7 +96,7 @@ const initializeServer = async () => {
 			]
 
 			socket.on('chat', async (data) => {
-				console.log(`[chat] ${req.ip}: ${data}`)
+				console.log(`[chat] ${ipAddress}: ${data}`)
 
 				if (process.env.NODE_ENV === 'production' && count >= 10) {
 					socket.emit('rate-limit')
