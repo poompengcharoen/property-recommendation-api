@@ -67,26 +67,6 @@ const initializeServer = async () => {
 			count = cachedCount ? cachedCount : count
 			socket.emit('count-tick', count)
 
-			socket.on('checkout-completed', async (sessionID) => {
-				try {
-					const res = await axios.post(`${API_URL}/transactions/track`, {
-						sessionID,
-					})
-
-					if (res.status === 200) {
-						const paymentSession = res.data.session
-
-						if (paymentSession.payment_status === 'paid' && cachedUsedTicket !== sessionID) {
-							count = 0
-							await setCache(cacheKey, { count: 0, usedTicket: sessionID }, 86400)
-							socket.emit('count-tick', count)
-						}
-					}
-				} catch (error) {
-					console.error('Error:', error)
-				}
-			})
-
 			const messages = [
 				{
 					role: 'system',
@@ -163,6 +143,26 @@ const initializeServer = async () => {
 					socket.emit('reply', {
 						message: 'Sorry, I could not process your request. Please try again later.',
 					})
+				}
+			})
+
+			socket.on('checkout-completed', async (sessionID) => {
+				try {
+					const res = await axios.post(`${API_URL}/transactions/track`, {
+						sessionID,
+					})
+
+					if (res.status === 200) {
+						const paymentSession = res.data.session
+
+						if (paymentSession.payment_status === 'paid' && cachedUsedTicket !== sessionID) {
+							count = 0
+							await setCache(cacheKey, { count: 0, usedTicket: sessionID }, 86400)
+							socket.emit('count-tick', count)
+						}
+					}
+				} catch (error) {
+					console.error('Error:', error)
 				}
 			})
 
