@@ -197,5 +197,15 @@ app.get('/random-prompts', async (req, res) => {
 	}
 })
 
+app.get('/ip', async (req, res) => {
+	try {
+		const ipAddress = req.ip
+		res.status(200).json({ ipAddress })
+	} catch (error) {
+		console.error('Error:', error)
+		res.status(500).json({ success: false, message: error.message })
+	}
+})
+
 // Initialize the server and connect to the database
 initializeServer()
