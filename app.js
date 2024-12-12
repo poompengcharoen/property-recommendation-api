@@ -37,7 +37,25 @@ const httpServer = createServer(app)
 // Initialize Socket.IO
 const io = new Server(httpServer, {
 	cors: {
-		origin: '*', // Adjust to your frontend's domain in production
+		origin: (origin, callback) => {
+			if (process.env.NODE_ENV === 'production') {
+				// Allow specific origins
+				if (origin && /^https:\/\/.*\.poompengcharoen\.dev$/.test(origin)) {
+					return callback(null, true)
+				}
+
+				// Deny other origins
+				return callback(new Error('Not allowed by CORS'))
+			} else {
+				// Development mode: Allow localhost on any port
+				if (origin && /^http:\/\/localhost:\d+$/.test(origin)) {
+					return callback(null, true)
+				}
+
+				// Deny other origins
+				return callback(new Error('Not allowed by CORS'))
+			}
+		},
 		methods: ['GET', 'POST'],
 	},
 })
