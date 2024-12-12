@@ -124,7 +124,7 @@ const initializeServer = async () => {
 							messages.push({
 								role: 'user',
 								content: `
-									Search results:
+									List properties from the results into a table.
 
 									${JSON.stringify(recommendations.results)}
 								`,
