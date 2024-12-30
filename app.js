@@ -172,8 +172,17 @@ const initializeServer = async () => {
 
 					if (res.status === 200) {
 						const paymentSession = res.data.session
+						const purchaseDate = new Date(paymentSession.created * 1000) // Stripe timestamps are in seconds
+						const currentDate = new Date()
 
-						if (paymentSession.payment_status === 'paid' && !usedTickets.includes(sessionID)) {
+						// Check if the ticket was purchased today
+						const isSameDay = purchaseDate.toDateString() === currentDate.toDateString()
+
+						if (
+							paymentSession.payment_status === 'paid' &&
+							!usedTickets.includes(sessionID) &&
+							isSameDay
+						) {
 							count = 0
 							const updatedUsedTickets = [...usedTickets, sessionID]
 							await setCache(cacheKey, { count: 0, usedTickets: updatedUsedTickets }, 86400)
