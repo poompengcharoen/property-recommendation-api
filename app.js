@@ -81,7 +81,7 @@ const initializeServer = async () => {
 				socket.handshake.address // Fallback to address if no header
 			const cacheKey = `property-recommendation-api:${ipAddress}`
 			const cachedData = await getCache(cacheKey)
-			const { count: cachedCount, usedTicket: cachedUsedTicket } = cachedData || {}
+			const { count: cachedCount, usedTickets = [] } = cachedData || {}
 			count = cachedCount ? cachedCount : count
 			socket.emit('count-tick', count)
 
@@ -154,7 +154,7 @@ const initializeServer = async () => {
 					socket.emit('end-stream')
 
 					count++
-					await setCache(cacheKey, { count, usedTicket: cachedUsedTicket || '' }, 86400) // Cache for 24 hours
+					await setCache(cacheKey, { count, usedTickets }, 86400) // Cache for 24 hours
 					socket.emit('count-tick', count)
 				} catch (error) {
 					console.error('Error:', error)
@@ -173,9 +173,10 @@ const initializeServer = async () => {
 					if (res.status === 200) {
 						const paymentSession = res.data.session
 
-						if (paymentSession.payment_status === 'paid' && cachedUsedTicket !== sessionID) {
+						if (paymentSession.payment_status === 'paid' && !usedTickets.includes(sessionID)) {
 							count = 0
-							await setCache(cacheKey, { count: 0, usedTicket: sessionID }, 86400)
+							const updatedUsedTickets = [...usedTickets, sessionID]
+							await setCache(cacheKey, { count: 0, usedTickets: updatedUsedTickets }, 86400)
 							socket.emit('count-tick', count)
 						}
 					}
