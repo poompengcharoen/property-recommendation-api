@@ -44,6 +44,11 @@ const io = new Server(httpServer, {
 					return callback(null, true)
 				}
 
+				// Allow kiluth.com
+				if (origin && /^https:\/\/.*\.kiluth\.com$/.test(origin)) {
+					return callback(null, true)
+				}
+
 				// Deny other origins
 				return callback(new Error('Not allowed by CORS'))
 			} else {
