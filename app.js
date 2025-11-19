@@ -6,6 +6,7 @@ import axios from 'axios'
 import { connectDb } from './config/db.js'
 import cors from 'cors'
 import { createServer } from 'http'
+import crypto from 'crypto'
 import dotenv from 'dotenv'
 import express from 'express'
 import generateRandomPrompts from './utils/generateRandomPrompts.js'
@@ -25,6 +26,40 @@ const API_URL =
 	process.env.NODE_ENV === 'production'
 		? 'https://api.poompengcharoen.dev'
 		: 'http://localhost:3000'
+
+// Generate cache key for chat responses based on message and conversation history
+const generateChatCacheKey = (currentMessage, messages) => {
+	const conversationContext = messages
+		.slice(-3)
+		.map((m) => `${m.role}:${m.content}`)
+		.join('|')
+	const combined = `${currentMessage}|${conversationContext}`
+	const hash = crypto.createHash('sha256').update(combined).digest('hex').substring(0, 16)
+	return `property-recommendation-api:chat:${hash}`
+}
+
+// Replay cached response as stream
+const replayCachedResponse = async (socket, cachedResponse) => {
+	const { fullResponse, hasSearch, searchPrompt } = cachedResponse
+
+	// Emit response in chunks to simulate streaming
+	const chunkSize = 5
+	for (let i = 0; i < fullResponse.length; i += chunkSize) {
+		const chunk = fullResponse.substring(i, i + chunkSize)
+		socket.emit('stream', chunk)
+		// Small delay to simulate streaming
+		await new Promise((resolve) => setTimeout(resolve, 40))
+	}
+
+	// Handle search if it was triggered in cached response
+	if (hasSearch && searchPrompt) {
+		socket.emit('searching')
+		const freshRecommendations = await recommendProperties(searchPrompt)
+		socket.emit('recommend', freshRecommendations)
+	}
+
+	socket.emit('end-stream')
+}
 
 app.set('trust proxy', true)
 app.use(express.json())
@@ -94,7 +129,7 @@ const initializeServer = async () => {
 				{
 					role: 'system',
 					content:
-						"You are a helpful assistant with expertise in property search. Read the user's message carefully. If the user prompt a direct command, do it. Otherwise, your goal is to finalize a search prompt based on the user's input. If the input contains any hint of preferences such as location, budget, property type, or features, immediately construct and respond with the finalized prompt wrapped by [SEARCHING] and [DONE] on the same line, with no extra text. If the input lacks sufficient detail and the user seems to need help, ask one specific and relevant question to guide them before finalizing. Always prioritize assisting the user efficiently and initiating the search pipeline promptly.",
+						"You are a helpful assistant with expertise in property search. Always keep your responses short, concise, and to the point. Read the user's message carefully. If the user provides a direct command, execute it. Otherwise, your goal is to finalize a search prompt based on the user's input. If the input contains any hint of preferences such as location, budget, property type, or features, immediately construct and respond with ONLY the finalized prompt in this exact format: [SEARCHING]your search prompt here[DONE] with no extra text before or after. If the input lacks sufficient detail and the user seems to need help, ask one specific and relevant question to guide them before finalizing. Always prioritize assisting the user efficiently and initiating the search pipeline promptly.",
 				},
 			]
 
@@ -113,6 +148,19 @@ const initializeServer = async () => {
 						message: '',
 					})
 
+					// Check cache for chat response
+					const chatCacheKey = generateChatCacheKey(data, messages)
+					const cachedResponse = await getCache(chatCacheKey)
+
+					if (cachedResponse) {
+						console.log('Cache hit: Replaying cached chat response')
+						await replayCachedResponse(socket, cachedResponse)
+						count++
+						await setCache(cacheKey, { count, usedTickets }, 86400)
+						socket.emit('count-tick', count)
+						return
+					}
+
 					const stream = await openai.chat.completions.create({
 						model: 'gpt-4o',
 						messages,
@@ -123,10 +171,14 @@ const initializeServer = async () => {
 					let line = ''
 					let isSearching = false
 					let isDone = false
+					let fullResponse = ''
+					let searchPrompt = null
+					let recommendations = null
 
 					for await (const chunk of stream) {
 						const token = chunk.choices[0]?.delta?.content || ''
 						line += token
+						fullResponse += token
 
 						if (!isSearching) {
 							socket.emit('stream', token)
@@ -141,8 +193,8 @@ const initializeServer = async () => {
 						// Perform search
 						if (isDone === false && isSearching === true && line.includes('[DONE]')) {
 							isSearching = false
-							const prompt = line.split('[DONE]')[0].trim().split('[SEARCHING]')[1].trim()
-							const recommendations = await recommendProperties(prompt)
+							searchPrompt = line.split('[DONE]')[0].trim().split('[SEARCHING]')[1].trim()
+							recommendations = await recommendProperties(searchPrompt)
 							socket.emit('recommend', recommendations)
 							messages.push({
 								role: 'user',
@@ -157,6 +209,15 @@ const initializeServer = async () => {
 					}
 
 					socket.emit('end-stream')
+
+					// Cache the response for 7 days
+					const responseToCache = {
+						fullResponse,
+						hasSearch: !!searchPrompt,
+						searchPrompt,
+						recommendations,
+					}
+					await setCache(chatCacheKey, responseToCache, 604800) // Cache for 7 days
 
 					count++
 					await setCache(cacheKey, { count, usedTickets }, 86400) // Cache for 24 hours
